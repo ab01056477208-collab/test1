@@ -141,6 +141,53 @@
         background: linear-gradient(135deg, #7258d8, #5842c7);
       }
 
+      .extra-results {
+        display: none;
+        margin: 8px 0 18px;
+        padding: 18px 20px;
+        border-radius: 16px;
+        background: #faf7f2;
+        border: 1px solid var(--line);
+      }
+
+      .extra-results.show {
+        display: block;
+      }
+
+      .extra-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--muted);
+        margin-bottom: 14px;
+        text-align: center;
+      }
+
+      .extra-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        justify-content: center;
+        margin-bottom: 10px;
+      }
+
+      .extra-row:last-child {
+        margin-bottom: 0;
+      }
+
+      .extra-label {
+        width: 28px;
+        font-weight: 800;
+        color: var(--primary-dark);
+        text-align: center;
+      }
+
+      .ball.mini {
+        width: 40px;
+        height: 40px;
+        font-size: 0.95rem;
+      }
+
       .result-box {
         display: none;
         padding: 20px 24px;
@@ -192,6 +239,12 @@
           font-size: 1.3rem;
         }
 
+        .ball.mini {
+          width: 34px;
+          height: 34px;
+          font-size: 0.85rem;
+        }
+
         .meta {
           grid-template-columns: 1fr;
         }
@@ -208,6 +261,7 @@
       <div class="content">
         <div class="controls">
           <button class="primary" id="drawBtn">번호 뽑기</button>
+          <button class="secondary" id="drawExtraBtn">5게임 추가 뽑기</button>
           <button class="secondary" id="resetBtn">초기화</button>
         </div>
 
@@ -221,6 +275,10 @@
         </div>
 
         <div class="result-box" id="resultBox">🎉 오늘의 로또 번호가 생성되었습니다!</div>
+
+        <div class="extra-results" id="extraResults" aria-live="polite">
+          <div class="extra-title">🍀 추가 5게임</div>
+        </div>
 
         <div class="meta">
           <div class="card">
@@ -238,11 +296,14 @@
 
     <script>
       const drawBtn = document.getElementById('drawBtn');
+      const drawExtraBtn = document.getElementById('drawExtraBtn');
       const resetBtn = document.getElementById('resetBtn');
       const drawnNumbers = document.getElementById('drawnNumbers');
       const resultBox = document.getElementById('resultBox');
+      const extraResults = document.getElementById('extraResults');
       const roundValue = document.getElementById('roundValue');
       const dateValue = document.getElementById('dateValue');
+      const GAME_LABELS = ['A', 'B', 'C', 'D', 'E'];
 
       function randomNumberSet() {
         const numbers = new Set();
@@ -267,6 +328,18 @@
         });
       }
 
+      function renderExtraGames() {
+        const rowsHtml = GAME_LABELS.map((label) => {
+          const numbers = randomNumberSet();
+          const ballsHtml = numbers
+            .map((value) => `<div class="ball mini" data-value="${value}">${value}</div>`)
+            .join('');
+          return `<div class="extra-row"><span class="extra-label">${label}</span>${ballsHtml}</div>`;
+        }).join('');
+        extraResults.innerHTML = `<div class="extra-title">🍀 추가 5게임</div>${rowsHtml}`;
+        extraResults.classList.add('show');
+      }
+
       function setDateInfo() {
         const now = new Date();
         const round = Math.floor((Date.now() - new Date('2024-01-01').getTime()) / (1000 * 60 * 60 * 24 * 7)) + 1;
@@ -285,9 +358,15 @@
         resultBox.textContent = `🎉 오늘의 로또 번호: ${numbers.join(', ')}`;
       });
 
+      drawExtraBtn.addEventListener('click', () => {
+        renderExtraGames();
+      });
+
       resetBtn.addEventListener('click', () => {
         updateBalls([undefined, undefined, undefined, undefined, undefined, undefined]);
         resultBox.classList.remove('show');
+        extraResults.classList.remove('show');
+        extraResults.innerHTML = '<div class="extra-title">🍀 추가 5게임</div>';
       });
 
       setDateInfo();
