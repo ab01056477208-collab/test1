@@ -388,6 +388,21 @@
         color: var(--error-text);
       }
 
+      .comments-section {
+        margin-top: 32px;
+        padding-top: 28px;
+        border-top: 1px solid var(--line);
+      }
+
+      .comments-section .contact-title {
+        margin-bottom: 18px;
+      }
+
+      .comments-section #disqus_thread {
+        background: var(--card);
+        border-radius: 12px;
+      }
+
       @media (max-width: 640px) {
         .content { padding: 22px 18px; }
         .header { padding: 22px 18px; }
@@ -492,6 +507,11 @@
 
             <div class="contact-status" id="contactStatus"></div>
           </form>
+        </div>
+
+        <div class="comments-section">
+          <div class="contact-title">💬 댓글</div>
+          <div id="disqus_thread"></div>
         </div>
       </div>
     </div>
@@ -648,5 +668,22 @@
         }
       });
     </script>
+
+    <script>
+      var disqus_config = function () {
+        this.page.url = 'https://ab01056477208-collab.github.io/test1/';
+        this.page.identifier = 'lotto-number-generator';
+      };
+      (function () {
+        var d = document, s = d.createElement('script');
+        s.src = 'https://test1-1-1.disqus.com/embed.js';
+        s.setAttribute('data-timestamp', +new Date());
+        (d.head || d.body).appendChild(s);
+      })();
+    </script>
+    <noscript>
+      Please enable JavaScript to view the
+      <a href="https://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+    </noscript>
   </body>
 </html>
