@@ -7,7 +7,9 @@
     <style>
       :root {
         --bg: #fffaf0;
+        --body-grad: linear-gradient(135deg, #fff7e6, #fffaf0 40%, #fff1d1);
         --card: #ffffff;
+        --card-alt: #faf7f2;
         --primary: #ffb000;
         --primary-dark: #e79b00;
         --text: #222222;
@@ -20,20 +22,78 @@
         --ball5: #e84118;
         --ball6: #7f8fa6;
         --shadow: rgba(0, 0, 0, 0.1);
+        --header-grad: linear-gradient(135deg, #ffcc52, #ffb000);
+        --header-text: #1f1f1f;
+        --secondary-bg: #f5f5f5;
+        --secondary-text: #222222;
+        --result-bg: #fff9ed;
+        --result-border: #ffe3a4;
+        --result-text: #7a5200;
+        --toggle-bg: rgba(255, 255, 255, 0.35);
+        --toggle-text: #1f1f1f;
+      }
+
+      html[data-theme="dark"] {
+        --bg: #14161c;
+        --body-grad: linear-gradient(135deg, #15171f, #1b1e27 40%, #11131a);
+        --card: #1e212b;
+        --card-alt: #262a35;
+        --primary: #ffb000;
+        --primary-dark: #ffc233;
+        --text: #f0f0f3;
+        --muted: #a7acb8;
+        --line: #343a48;
+        --shadow: rgba(0, 0, 0, 0.5);
+        --header-grad: linear-gradient(135deg, #342a1f, #4a3a1a);
+        --header-text: #ffe8b8;
+        --secondary-bg: #2b2f3b;
+        --secondary-text: #f0f0f3;
+        --result-bg: #2c2516;
+        --result-border: #5a4522;
+        --result-text: #ffd98a;
+        --toggle-bg: rgba(255, 255, 255, 0.1);
+        --toggle-text: #f0f0f3;
       }
 
       * { box-sizing: border-box; }
+
+      html, body {
+        transition: background 0.2s ease, color 0.2s ease;
+      }
 
       body {
         margin: 0;
         min-height: 100vh;
         font-family: Arial, sans-serif;
-        background: linear-gradient(135deg, #fff7e6, #fffaf0 40%, #fff1d1);
+        background: var(--body-grad);
         color: var(--text);
         display: flex;
         justify-content: center;
         align-items: center;
         padding: 24px;
+        position: relative;
+      }
+
+      .theme-toggle {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        border-radius: 999px;
+        background: var(--toggle-bg);
+        backdrop-filter: blur(6px);
+        color: var(--toggle-text);
+        border: 1px solid var(--line);
+        box-shadow: 0 4px 14px var(--shadow);
+      }
+
+      .theme-toggle .icon {
+        font-size: 1.1rem;
+        line-height: 1;
       }
 
       .app {
@@ -43,11 +103,12 @@
         border-radius: 24px;
         box-shadow: 0 20px 50px var(--shadow);
         overflow: hidden;
+        transition: background 0.2s ease, border-color 0.2s ease;
       }
 
       .header {
-        background: linear-gradient(135deg, #ffcc52, #ffb000);
-        color: #1f1f1f;
+        background: var(--header-grad);
+        color: var(--header-text);
         padding: 28px 32px;
         text-align: center;
       }
@@ -94,8 +155,8 @@
       }
 
       .secondary {
-        background: #f5f5f5;
-        color: var(--text);
+        background: var(--secondary-bg);
+        color: var(--secondary-text);
       }
 
       .drawn-numbers {
@@ -146,7 +207,7 @@
         margin: 8px 0 18px;
         padding: 18px 20px;
         border-radius: 16px;
-        background: #faf7f2;
+        background: var(--card-alt);
         border: 1px solid var(--line);
       }
 
@@ -192,11 +253,11 @@
         display: none;
         padding: 20px 24px;
         border-radius: 16px;
-        background: #fff9ed;
-        border: 1px solid #ffe3a4;
+        background: var(--result-bg);
+        border: 1px solid var(--result-border);
         text-align: center;
         font-size: 1.05rem;
-        color: #7a5200;
+        color: var(--result-text);
       }
 
       .result-box.show {
@@ -211,10 +272,11 @@
       }
 
       .card {
-        background: #faf7f2;
+        background: var(--card-alt);
         border: 1px solid var(--line);
         border-radius: 16px;
         padding: 18px 20px;
+        transition: background 0.2s ease, border-color 0.2s ease;
       }
 
       .label {
@@ -248,10 +310,25 @@
         .meta {
           grid-template-columns: 1fr;
         }
+
+        .theme-toggle {
+          top: 12px;
+          right: 12px;
+          padding: 10px 12px;
+        }
+
+        .theme-toggle #themeLabel {
+          display: none;
+        }
       }
     </style>
   </head>
   <body>
+    <button class="theme-toggle" id="themeToggle" type="button" aria-label="다크 모드 전환" aria-pressed="false">
+      <span class="icon" id="themeIcon">🌙</span>
+      <span id="themeLabel">다크 모드</span>
+    </button>
+
     <div class="app">
       <div class="header">
         <h1>로또 번호 추첨기</h1>
@@ -295,6 +372,44 @@
     </div>
 
     <script>
+      const themeToggle = document.getElementById('themeToggle');
+      const themeIcon = document.getElementById('themeIcon');
+      const themeLabel = document.getElementById('themeLabel');
+      const THEME_KEY = 'lotto-theme';
+
+      function applyTheme(theme) {
+        if (theme === 'dark') {
+          document.documentElement.setAttribute('data-theme', 'dark');
+          themeIcon.textContent = '☀️';
+          themeLabel.textContent = '라이트 모드';
+          themeToggle.setAttribute('aria-pressed', 'true');
+        } else {
+          document.documentElement.removeAttribute('data-theme');
+          themeIcon.textContent = '🌙';
+          themeLabel.textContent = '다크 모드';
+          themeToggle.setAttribute('aria-pressed', 'false');
+        }
+      }
+
+      function initTheme() {
+        const saved = localStorage.getItem(THEME_KEY);
+        if (saved) {
+          applyTheme(saved);
+          return;
+        }
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        applyTheme(prefersDark ? 'dark' : 'light');
+      }
+
+      themeToggle.addEventListener('click', () => {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const next = isDark ? 'light' : 'dark';
+        applyTheme(next);
+        localStorage.setItem(THEME_KEY, next);
+      });
+
+      initTheme();
+
       const drawBtn = document.getElementById('drawBtn');
       const drawExtraBtn = document.getElementById('drawExtraBtn');
       const resetBtn = document.getElementById('resetBtn');
