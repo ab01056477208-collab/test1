@@ -31,6 +31,9 @@
         --result-text: #7a5200;
         --toggle-bg: rgba(255, 255, 255, 0.35);
         --toggle-text: #1f1f1f;
+        --error-bg: #fdecea;
+        --error-border: #f5c6cb;
+        --error-text: #a12a2a;
       }
 
       html[data-theme="dark"] {
@@ -53,6 +56,9 @@
         --result-text: #ffd98a;
         --toggle-bg: rgba(255, 255, 255, 0.1);
         --toggle-text: #f0f0f3;
+        --error-bg: #3a2222;
+        --error-border: #6b3838;
+        --error-text: #ff9b9b;
       }
 
       * { box-sizing: border-box; }
@@ -291,6 +297,97 @@
         font-weight: 800;
       }
 
+      .contact-section {
+        margin-top: 32px;
+        padding-top: 28px;
+        border-top: 1px solid var(--line);
+      }
+
+      .contact-title {
+        font-size: 1.3rem;
+        font-weight: 800;
+        text-align: center;
+        margin-bottom: 4px;
+      }
+
+      .contact-subtitle {
+        font-size: 0.9rem;
+        color: var(--muted);
+        text-align: center;
+        margin-bottom: 20px;
+      }
+
+      .contact-form {
+        display: grid;
+        gap: 14px;
+        max-width: 480px;
+        margin: 0 auto;
+      }
+
+      .field {
+        display: grid;
+        gap: 6px;
+      }
+
+      .field label {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--muted);
+      }
+
+      .field input,
+      .field textarea {
+        font-family: inherit;
+        font-size: 1rem;
+        padding: 12px 14px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: var(--card-alt);
+        color: var(--text);
+        resize: vertical;
+      }
+
+      .field input:focus,
+      .field textarea:focus {
+        outline: 2px solid var(--primary);
+        outline-offset: 1px;
+      }
+
+      .contact-form .primary {
+        width: 100%;
+      }
+
+      .contact-form .primary:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
+      }
+
+      .contact-status {
+        display: none;
+        margin-top: 4px;
+        padding: 14px 16px;
+        border-radius: 12px;
+        text-align: center;
+        font-size: 0.95rem;
+      }
+
+      .contact-status.show {
+        display: block;
+      }
+
+      .contact-status.success {
+        background: var(--result-bg);
+        border: 1px solid var(--result-border);
+        color: var(--result-text);
+      }
+
+      .contact-status.error {
+        background: var(--error-bg);
+        border: 1px solid var(--error-border);
+        color: var(--error-text);
+      }
+
       @media (max-width: 640px) {
         .content { padding: 22px 18px; }
         .header { padding: 22px 18px; }
@@ -367,6 +464,34 @@
             <span class="label">추첨 날짜</span>
             <div class="value" id="dateValue">-</div>
           </div>
+        </div>
+
+        <div class="contact-section">
+          <div class="contact-title">🤝 제휴 문의</div>
+          <div class="contact-subtitle">제휴 및 협업 제안은 아래 양식으로 보내주세요</div>
+
+          <form class="contact-form" id="contactForm" action="https://formspree.io/f/xzedyybl" method="POST">
+            <div class="field">
+              <label for="contactName">이름</label>
+              <input type="text" id="contactName" name="name" placeholder="홍길동" required />
+            </div>
+
+            <div class="field">
+              <label for="contactEmail">이메일</label>
+              <input type="email" id="contactEmail" name="email" placeholder="example@email.com" required />
+            </div>
+
+            <div class="field">
+              <label for="contactMessage">문의 내용</label>
+              <textarea id="contactMessage" name="message" rows="4" placeholder="제휴 제안 내용을 입력해 주세요" required></textarea>
+            </div>
+
+            <input type="text" name="_gotcha" style="display:none" tabindex="-1" autocomplete="off" />
+
+            <button type="submit" class="primary" id="contactSubmit">문의 보내기</button>
+
+            <div class="contact-status" id="contactStatus"></div>
+          </form>
         </div>
       </div>
     </div>
@@ -486,6 +611,42 @@
 
       setDateInfo();
       updateBalls([undefined, undefined, undefined, undefined, undefined, undefined]);
+
+      const contactForm = document.getElementById('contactForm');
+      const contactSubmit = document.getElementById('contactSubmit');
+      const contactStatus = document.getElementById('contactStatus');
+
+      contactForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        contactStatus.classList.remove('show', 'success', 'error');
+        contactSubmit.disabled = true;
+        contactSubmit.textContent = '보내는 중...';
+
+        try {
+          const response = await fetch(contactForm.action, {
+            method: 'POST',
+            body: new FormData(contactForm),
+            headers: { Accept: 'application/json' }
+          });
+
+          if (response.ok) {
+            contactStatus.textContent = '✅ 문의가 접수되었습니다. 빠른 시일 내에 답변드리겠습니다!';
+            contactStatus.classList.add('show', 'success');
+            contactForm.reset();
+          } else {
+            const data = await response.json().catch(() => null);
+            const message = data?.errors?.map((e) => e.message).join(', ');
+            contactStatus.textContent = `⚠️ 전송에 실패했습니다. ${message || '잠시 후 다시 시도해 주세요.'}`;
+            contactStatus.classList.add('show', 'error');
+          }
+        } catch (error) {
+          contactStatus.textContent = '⚠️ 네트워크 오류로 전송하지 못했습니다. 잠시 후 다시 시도해 주세요.';
+          contactStatus.classList.add('show', 'error');
+        } finally {
+          contactSubmit.disabled = false;
+          contactSubmit.textContent = '문의 보내기';
+        }
+      });
     </script>
   </body>
 </html>
