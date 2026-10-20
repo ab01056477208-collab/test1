@@ -1,6 +1,7 @@
 // Cloudflare Pages Function: /api/analyze-photo
-// 업로드된 사진을 OpenAI Vision 모델로 분석해 체형/피부톤/스타일 힌트를 반환합니다.
-// API 키는 Cloudflare 대시보드의 환경변수(OPENAI_API_KEY)로만 관리하며, 이 코드에는 포함하지 않습니다.
+// 업로드된 사진을 Google Gemini Vision 모델로 분석해 체형/피부톤/스타일 힌트를 반환합니다.
+// Gemini의 OpenAI 호환 엔드포인트(https://ai.google.dev/gemini-api/docs/openai)를 사용합니다.
+// API 키는 Cloudflare 대시보드의 환경변수(GEMINI_API_KEY)로만 관리하며, 이 코드에는 포함하지 않습니다.
 
 const ALLOWED = {
   shoulder: ['wide', 'normal', 'narrow'],
@@ -59,7 +60,7 @@ function normalize(obj) {
 export async function onRequestPost(context) {
   try {
     const { request, env } = context;
-    const apiKey = env.OPENAI_API_KEY;
+    const apiKey = env.GEMINI_API_KEY;
 
     if (!apiKey) {
       return json({ error: 'missing_api_key' }, 500);
@@ -73,7 +74,7 @@ export async function onRequestPost(context) {
     }
 
     const payload = {
-      model: 'gpt-4o-mini',
+      model: 'gemini-3.5-flash-lite',
       temperature: 0.3,
       max_tokens: 400,
       messages: [
@@ -88,7 +89,7 @@ export async function onRequestPost(context) {
       ]
     };
 
-    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+    const resp = await fetch('https://generativelanguage.googleapis.com/v1beta/openai/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -99,7 +100,7 @@ export async function onRequestPost(context) {
 
     if (!resp.ok) {
       const detail = await resp.text().catch(() => '');
-      return json({ error: 'openai_error', detail: detail.slice(0, 300) }, 502);
+      return json({ error: 'gemini_error', detail: detail.slice(0, 300) }, 502);
     }
 
     const data = await resp.json();
