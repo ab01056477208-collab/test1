@@ -311,11 +311,75 @@
         padding: 18px 20px;
       }
 
+      .recommend-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+
+      .recommend-icon {
+        flex-shrink: 0;
+        width: 56px;
+        height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--card);
+        border-radius: 12px;
+        border: 1px solid var(--line);
+      }
+
       .recommend-title {
         font-size: 1.1rem;
         font-weight: 800;
         color: var(--primary-dark);
-        margin-bottom: 10px;
+      }
+
+      /* ===== 사진 업로드 단계 ===== */
+      .photo-dropzone {
+        border: 2px dashed var(--line);
+        border-radius: 16px;
+        padding: 24px;
+        text-align: center;
+        background: var(--card-alt);
+        margin-bottom: 14px;
+      }
+
+      .photo-dropzone input[type="file"] {
+        display: none;
+      }
+
+      .photo-preview {
+        max-width: 180px;
+        max-height: 220px;
+        border-radius: 12px;
+        margin: 0 auto 12px;
+        display: none;
+        border: 1px solid var(--line);
+      }
+
+      .photo-preview.show { display: block; }
+
+      .photo-hint {
+        font-size: 0.85rem;
+        color: var(--muted);
+        margin-top: 8px;
+      }
+
+      .photo-status {
+        font-size: 0.9rem;
+        color: var(--muted);
+        margin: 10px 0;
+        min-height: 1.2em;
+      }
+
+      .photo-status.error { color: var(--error-text); }
+
+      .chat-photo {
+        max-width: 160px;
+        border-radius: 12px;
+        display: block;
       }
 
       .recommend-grid {
@@ -634,27 +698,9 @@
           numberFields: [{ key: 'height', label: '키(cm)' }, { key: 'weight', label: '몸무게(kg)' }]
         },
         {
-          id: 'bodyTop',
-          bot: '체형을 알려주세요. 어깨와 상체·복부는 어떤 편인가요?',
-          groups: [
-            { key: 'shoulder', label: '어깨', options: [['넓다', 'wide'], ['보통', 'normal'], ['좁다', 'narrow']] },
-            { key: 'torso', label: '상체·복부', options: [['마른 편', 'thin'], ['보통', 'normal'], ['배가 나온 편', 'belly']] }
-          ]
-        },
-        {
-          id: 'bodyLower',
-          bot: '하체는 어떤 편인가요?',
-          groups: [{ key: 'lower', label: '하체', options: [['얇다', 'thin'], ['보통', 'normal'], ['두꺼운 편', 'thick']] }]
-        },
-        {
-          id: 'skin',
-          bot: '피부톤도 알려주세요! 손목 안쪽 혈관이 푸른빛이면 쿨톤, 초록빛이면 웜톤이에요. 사진은 필요 없어요.',
-          groups: [{ key: 'tone', label: '피부톤', options: [['웜톤', 'warm'], ['쿨톤', 'cool'], ['모르겠음', 'unknown']] }]
-        },
-        {
-          id: 'style',
-          bot: '선호하는 스타일이 있나요?',
-          groups: [{ key: 'style', options: [['캐주얼', 'casual'], ['스트릿', 'street'], ['미니멀', 'minimal'], ['아메카지', 'amekaji'], ['댄디', 'dandy'], ['잘 모르겠음', 'unknown']] }]
+          id: 'photo',
+          type: 'photo',
+          bot: '이제 사진 한 장만 올려주시면 체형·피부톤·스타일을 AI가 직접 분석해드릴게요!\n얼굴이 보이지 않아도 괜찮아요. 전신 또는 상반신 사진이면 더 정확해요. (사진은 분석 용도로만 사용되고 저장되지 않아요)'
         },
         {
           id: 'situation',
@@ -687,12 +733,12 @@
         return row;
       }
 
-      function addRichMessage(node) {
+      function addRichMessage(node, who = 'bot') {
         const row = document.createElement('div');
-        row.className = 'message bot';
+        row.className = `message ${who}`;
         const bubble = document.createElement('div');
         bubble.className = 'bubble';
-        bubble.style.maxWidth = '100%';
+        if (who === 'bot') bubble.style.maxWidth = '100%';
         bubble.appendChild(node);
         row.appendChild(bubble);
         chatWindow.appendChild(row);
@@ -716,6 +762,11 @@
         const step = STEPS[stepIndex];
         addMessage(step.bot, 'bot');
         currentSelection = {};
+
+        if (step.type === 'photo') {
+          renderPhotoStep();
+          return;
+        }
 
         const panel = document.createElement('div');
 
@@ -826,6 +877,188 @@
         renderStep();
       }
 
+      /* ===================== 사진 업로드 & AI 분석 단계 ===================== */
+
+      const VALUE_LABELS = {
+        shoulder: { wide: '넓다', normal: '보통', narrow: '좁다' },
+        torso: { thin: '마른 편', normal: '보통', belly: '배가 나온 편' },
+        lower: { thin: '얇다', normal: '보통', thick: '두꺼운 편' },
+        tone: { warm: '웜톤', cool: '쿨톤', unknown: '모르겠음' },
+        style: { casual: '캐주얼', street: '스트릿', minimal: '미니멀', amekaji: '아메카지', dandy: '댄디', unknown: '모르겠음' }
+      };
+
+      function labelOf(category, value) {
+        return (VALUE_LABELS[category] && VALUE_LABELS[category][value]) || value;
+      }
+
+      function resizeImageFile(file, maxSize) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onerror = () => reject(new Error('read_failed'));
+          reader.onload = (e) => {
+            const img = new Image();
+            img.onerror = () => reject(new Error('image_failed'));
+            img.onload = () => {
+              let { width, height } = img;
+              if (width > height && width > maxSize) {
+                height = Math.round(height * (maxSize / width));
+                width = maxSize;
+              } else if (height >= width && height > maxSize) {
+                width = Math.round(width * (maxSize / height));
+                height = maxSize;
+              }
+              const canvas = document.createElement('canvas');
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, width, height);
+              resolve(canvas.toDataURL('image/jpeg', 0.75));
+            };
+            img.src = e.target.result;
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+
+      async function analyzePhoto(dataUrl) {
+        const response = await fetch('/api/analyze-photo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: dataUrl })
+        });
+        if (!response.ok) throw new Error('request_failed');
+        const data = await response.json();
+        if (!data || !data.result) throw new Error('no_result');
+        return data.result;
+      }
+
+      function renderPhotoStep() {
+        const panel = document.createElement('div');
+
+        const dropzone = document.createElement('div');
+        dropzone.className = 'photo-dropzone';
+
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*';
+        fileInput.id = 'photoInput';
+
+        const preview = document.createElement('img');
+        preview.className = 'photo-preview';
+
+        const pickBtn = document.createElement('button');
+        pickBtn.type = 'button';
+        pickBtn.className = 'secondary';
+        pickBtn.textContent = '📷 사진 선택';
+        pickBtn.addEventListener('click', () => fileInput.click());
+
+        const hint = document.createElement('div');
+        hint.className = 'photo-hint';
+        hint.textContent = '얼굴이 보이지 않는 사진도 괜찮아요. jpg/png 파일을 올려주세요.';
+
+        const status = document.createElement('div');
+        status.className = 'photo-status';
+
+        let resizedDataUrl = null;
+
+        fileInput.addEventListener('change', async () => {
+          const file = fileInput.files && fileInput.files[0];
+          if (!file) return;
+          status.textContent = '사진을 불러오는 중...';
+          status.classList.remove('error');
+          try {
+            resizedDataUrl = await resizeImageFile(file, 512);
+            preview.src = resizedDataUrl;
+            preview.classList.add('show');
+            status.textContent = '사진이 준비됐어요. "AI로 분석하기"를 눌러주세요.';
+            analyzeBtn.disabled = false;
+          } catch (err) {
+            status.textContent = '사진을 불러오지 못했어요. 다른 사진을 시도해 주세요.';
+            status.classList.add('error');
+          }
+        });
+
+        dropzone.appendChild(fileInput);
+        dropzone.appendChild(preview);
+        dropzone.appendChild(pickBtn);
+        dropzone.appendChild(hint);
+        dropzone.appendChild(status);
+        panel.appendChild(dropzone);
+
+        const actions = document.createElement('div');
+        actions.className = 'step-actions';
+
+        const skipBtn = document.createElement('button');
+        skipBtn.type = 'button';
+        skipBtn.className = 'secondary';
+        skipBtn.textContent = '사진 없이 진행';
+        skipBtn.addEventListener('click', () => {
+          applyPhotoResult(null, resizedDataUrl);
+        });
+
+        const analyzeBtn = document.createElement('button');
+        analyzeBtn.type = 'button';
+        analyzeBtn.className = 'primary';
+        analyzeBtn.textContent = 'AI로 분석하기';
+        analyzeBtn.disabled = true;
+        analyzeBtn.addEventListener('click', async () => {
+          if (!resizedDataUrl) return;
+          analyzeBtn.disabled = true;
+          skipBtn.disabled = true;
+          status.classList.remove('error');
+          status.textContent = 'AI가 사진을 분석하고 있어요... 잠시만 기다려주세요.';
+          try {
+            const result = await analyzePhoto(resizedDataUrl);
+            applyPhotoResult(result, resizedDataUrl);
+          } catch (err) {
+            status.textContent = '분석에 실패했어요. 기본값으로 진행할게요.';
+            status.classList.add('error');
+            setTimeout(() => applyPhotoResult(null, resizedDataUrl), 600);
+          }
+        });
+
+        actions.appendChild(skipBtn);
+        actions.appendChild(analyzeBtn);
+        panel.appendChild(actions);
+
+        stepPanel.innerHTML = '';
+        stepPanel.appendChild(panel);
+      }
+
+      function applyPhotoResult(result, dataUrl) {
+        if (dataUrl) {
+          const img = document.createElement('img');
+          img.className = 'chat-photo';
+          img.src = dataUrl;
+          addRichMessage(img, 'user');
+        }
+
+        if (result) {
+          state.shoulder = result.shoulder || 'normal';
+          state.torso = result.torso || 'normal';
+          state.lower = result.lower || 'normal';
+          state.tone = result.tone || 'unknown';
+          state.style = result.style || 'unknown';
+
+          const summaryLine = result.summary ? `\n${result.summary}` : '';
+          addMessage(
+            `AI 분석 결과예요 🔍\n어깨: ${labelOf('shoulder', state.shoulder)} / 상체·복부: ${labelOf('torso', state.torso)} / 하체: ${labelOf('lower', state.lower)}\n` +
+            `피부톤: ${labelOf('tone', state.tone)} / 선호 스타일 느낌: ${labelOf('style', state.style)}${summaryLine}`,
+            'bot'
+          );
+        } else {
+          state.shoulder = 'normal';
+          state.torso = 'normal';
+          state.lower = 'normal';
+          state.tone = 'unknown';
+          state.style = 'unknown';
+          addMessage('사진 분석 없이 무난한 기본값(보통 체형, 기본 컬러)으로 가정하고 진행할게요!', 'bot');
+        }
+
+        stepIndex += 1;
+        renderStep();
+      }
+
       /* ===================== 추천 생성 로직 ===================== */
 
       function pickBodyNote(s) {
@@ -871,6 +1104,7 @@
         return {
           title: `${style.label} ${situation.label}룩`,
           mood: style.mood,
+          styleKey,
           items,
           reason: reasonText.trim(),
           brands: budget.brands,
@@ -878,14 +1112,44 @@
         };
       }
 
+      // 스타일별 간단한 코디 일러스트 아이콘 (외부 이미지 없이 직접 제작)
+      function outfitIconSVG(styleKey) {
+        const PALETTE = {
+          casual:  { shirt: '#9bd0ff', pants: '#3b4a5a', accent: '#ffffff' },
+          street:  { shirt: '#2b2b2b', pants: '#555555', accent: '#ff7a00' },
+          minimal: { shirt: '#e8e8e8', pants: '#bfbfbf', accent: '#444444' },
+          amekaji: { shirt: '#8a6a4b', pants: '#5b4636', accent: '#d8c3a5' },
+          dandy:   { shirt: '#ffffff', pants: '#2c3440', accent: '#c9a227' }
+        };
+        const p = PALETTE[styleKey] || PALETTE.casual;
+        return `
+          <svg width="40" height="48" viewBox="0 0 56 64" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="28" cy="10" r="7" fill="${p.accent}" opacity="0.35"/>
+            <path d="M14 20 L22 16 L28 20 L34 16 L42 20 L40 34 L16 34 Z" fill="${p.shirt}" stroke="#00000022"/>
+            <rect x="18" y="34" width="8" height="24" rx="2" fill="${p.pants}"/>
+            <rect x="30" y="34" width="8" height="24" rx="2" fill="${p.pants}"/>
+            <circle cx="28" cy="20" r="3" fill="${p.accent}"/>
+          </svg>`;
+      }
+
       function renderOutfitCard(outfit) {
         const card = document.createElement('div');
         card.className = 'recommend-card';
 
+        const header = document.createElement('div');
+        header.className = 'recommend-header';
+
+        const iconWrap = document.createElement('div');
+        iconWrap.className = 'recommend-icon';
+        iconWrap.innerHTML = outfitIconSVG(outfit.styleKey);
+        header.appendChild(iconWrap);
+
         const title = document.createElement('div');
         title.className = 'recommend-title';
         title.textContent = `✨ ${outfit.title}`;
-        card.appendChild(title);
+        header.appendChild(title);
+
+        card.appendChild(header);
 
         const grid = document.createElement('div');
         grid.className = 'recommend-grid';
