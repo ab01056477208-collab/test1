@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>로또 번호 추첨기</title>
+    <title>남성 코디 추천 챗봇</title>
     <style>
       :root {
         --bg: #fffaf0;
@@ -15,12 +15,6 @@
         --text: #222222;
         --muted: #666666;
         --line: #f0e7d6;
-        --ball1: #fbc531;
-        --ball2: #4cd137;
-        --ball3: #00a8ff;
-        --ball4: #9c88ff;
-        --ball5: #e84118;
-        --ball6: #7f8fa6;
         --shadow: rgba(0, 0, 0, 0.1);
         --header-grad: linear-gradient(135deg, #ffcc52, #ffb000);
         --header-text: #1f1f1f;
@@ -34,6 +28,9 @@
         --error-bg: #fdecea;
         --error-border: #f5c6cb;
         --error-text: #a12a2a;
+        --bot-bubble: #f1f1f4;
+        --user-bubble: #ffb000;
+        --user-bubble-text: #1f1f1f;
       }
 
       html[data-theme="dark"] {
@@ -59,6 +56,9 @@
         --error-bg: #3a2222;
         --error-border: #6b3838;
         --error-text: #ff9b9b;
+        --bot-bubble: #2b2f3b;
+        --user-bubble: #ffb000;
+        --user-bubble-text: #1f1f1f;
       }
 
       * { box-sizing: border-box; }
@@ -121,25 +121,138 @@
 
       h1 {
         margin: 0;
-        font-size: clamp(2rem, 4vw, 3rem);
+        font-size: clamp(1.7rem, 4vw, 2.6rem);
       }
 
       .subtitle {
         margin-top: 8px;
         font-size: 1rem;
-        opacity: 0.8;
+        opacity: 0.85;
       }
 
       .content {
         padding: 32px;
       }
 
-      .controls {
+      /* ===== Chat UI ===== */
+      .chat-window {
         display: flex;
-        justify-content: center;
-        gap: 12px;
+        flex-direction: column;
+        gap: 14px;
+        max-height: 520px;
+        overflow-y: auto;
+        padding: 8px 4px 16px;
+        margin-bottom: 16px;
+      }
+
+      .message {
+        display: flex;
+        width: 100%;
+      }
+
+      .message.bot { justify-content: flex-start; }
+      .message.user { justify-content: flex-end; }
+
+      .bubble {
+        max-width: 80%;
+        padding: 12px 16px;
+        border-radius: 16px;
+        line-height: 1.5;
+        font-size: 0.97rem;
+        white-space: pre-line;
+      }
+
+      .message.bot .bubble {
+        background: var(--bot-bubble);
+        color: var(--text);
+        border-bottom-left-radius: 4px;
+      }
+
+      .message.user .bubble {
+        background: var(--user-bubble);
+        color: var(--user-bubble-text);
+        border-bottom-right-radius: 4px;
+        font-weight: 700;
+      }
+
+      .step-panel {
+        border-top: 1px solid var(--line);
+        padding-top: 16px;
+      }
+
+      .group {
+        margin-bottom: 14px;
+      }
+
+      .group:last-child { margin-bottom: 0; }
+
+      .group-label {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--muted);
+        margin-bottom: 8px;
+      }
+
+      .chips {
+        display: flex;
         flex-wrap: wrap;
-        margin-bottom: 28px;
+        gap: 8px;
+      }
+
+      .chip {
+        border: 1px solid var(--line);
+        background: var(--card-alt);
+        color: var(--text);
+        border-radius: 999px;
+        padding: 9px 16px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.15s ease, transform 0.1s ease, color 0.15s ease;
+      }
+
+      .chip:hover { transform: translateY(-1px); }
+
+      .chip.selected {
+        background: var(--primary);
+        color: #1f1f1f;
+        border-color: var(--primary-dark);
+      }
+
+      .number-fields {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      .number-fields .field {
+        flex: 1;
+        min-width: 120px;
+        display: grid;
+        gap: 6px;
+      }
+
+      .number-fields label {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--muted);
+      }
+
+      .number-fields input {
+        font-family: inherit;
+        font-size: 1rem;
+        padding: 11px 14px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: var(--card-alt);
+        color: var(--text);
+      }
+
+      .step-actions {
+        margin-top: 16px;
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
       }
 
       button {
@@ -147,13 +260,20 @@
         border-radius: 12px;
         font-size: 1rem;
         font-weight: 700;
-        padding: 14px 22px;
+        padding: 12px 20px;
         cursor: pointer;
         transition: transform 0.15s ease, opacity 0.15s ease;
+        font-family: inherit;
       }
 
       button:hover { transform: translateY(-1px); }
       button:active { transform: translateY(0); }
+
+      button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+      }
 
       .primary {
         background: var(--primary);
@@ -165,138 +285,64 @@
         color: var(--secondary-text);
       }
 
-      .drawn-numbers {
+      .quick-replies {
         display: flex;
-        justify-content: center;
         flex-wrap: wrap;
-        gap: 14px;
-        margin: 24px 0 18px;
+        gap: 8px;
+        margin-top: 4px;
       }
 
-      .ball {
-        width: 70px;
-        height: 70px;
-        border-radius: 50%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        font-size: 1.7rem;
-        font-weight: 800;
-        color: white;
-        box-shadow: inset 0 -6px 10px rgba(0,0,0,0.12), 0 8px 16px rgba(0,0,0,0.08);
+      .quick-replies button {
+        padding: 10px 16px;
+        font-size: 0.9rem;
       }
 
-      .ball.empty {
-        background: linear-gradient(135deg, #f3f4f6, #dfe5ec);
-        color: #8a8a8a;
-        box-shadow: inset 0 -6px 10px rgba(0,0,0,0.06);
+      /* ===== Recommendation cards ===== */
+      .recommend-wrap {
+        display: grid;
+        gap: 16px;
+        margin-top: 4px;
       }
 
-      .ball[data-value="1"], .ball[data-value="4"], .ball[data-value="7"], .ball[data-value="10"], .ball[data-value="13"], .ball[data-value="16"], .ball[data-value="19"], .ball[data-value="22"], .ball[data-value="25"], .ball[data-value="28"], .ball[data-value="31"], .ball[data-value="34"], .ball[data-value="37"], .ball[data-value="40"], .ball[data-value="43"], .ball[data-value="46"] {
-        background: linear-gradient(135deg, var(--ball1), #f0b80f);
-      }
-
-      .ball[data-value="2"], .ball[data-value="5"], .ball[data-value="8"], .ball[data-value="11"], .ball[data-value="14"], .ball[data-value="17"], .ball[data-value="20"], .ball[data-value="23"], .ball[data-value="26"], .ball[data-value="29"], .ball[data-value="32"], .ball[data-value="35"], .ball[data-value="38"], .ball[data-value="41"], .ball[data-value="44"], .ball[data-value="47"] {
-        background: linear-gradient(135deg, var(--ball2), #1faa2d);
-      }
-
-      .ball[data-value="3"], .ball[data-value="6"], .ball[data-value="9"], .ball[data-value="12"], .ball[data-value="15"], .ball[data-value="18"], .ball[data-value="21"], .ball[data-value="24"], .ball[data-value="27"], .ball[data-value="30"], .ball[data-value="33"], .ball[data-value="36"], .ball[data-value="39"], .ball[data-value="42"], .ball[data-value="45"], .ball[data-value="48"], .ball[data-value="49"] {
-        background: linear-gradient(135deg, var(--ball3), #007dc3);
-      }
-
-      .ball[data-value="50"] {
-        background: linear-gradient(135deg, #7258d8, #5842c7);
-      }
-
-      .extra-results {
-        display: none;
-        margin: 8px 0 18px;
-        padding: 18px 20px;
-        border-radius: 16px;
+      .recommend-card {
         background: var(--card-alt);
         border: 1px solid var(--line);
+        border-radius: 16px;
+        padding: 18px 20px;
       }
 
-      .extra-results.show {
-        display: block;
-      }
-
-      .extra-title {
-        font-size: 0.95rem;
-        font-weight: 700;
-        color: var(--muted);
-        margin-bottom: 14px;
-        text-align: center;
-      }
-
-      .extra-row {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        flex-wrap: wrap;
-        justify-content: center;
-        margin-bottom: 10px;
-      }
-
-      .extra-row:last-child {
-        margin-bottom: 0;
-      }
-
-      .extra-label {
-        width: 28px;
+      .recommend-title {
+        font-size: 1.1rem;
         font-weight: 800;
         color: var(--primary-dark);
-        text-align: center;
-      }
-
-      .ball.mini {
-        width: 40px;
-        height: 40px;
-        font-size: 0.95rem;
-      }
-
-      .result-box {
-        display: none;
-        padding: 20px 24px;
-        border-radius: 16px;
-        background: var(--result-bg);
-        border: 1px solid var(--result-border);
-        text-align: center;
-        font-size: 1.05rem;
-        color: var(--result-text);
-      }
-
-      .result-box.show {
-        display: block;
-      }
-
-      .meta {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(160px, 1fr));
-        gap: 16px;
-        margin-top: 28px;
-      }
-
-      .card {
-        background: var(--card-alt);
-        border: 1px solid var(--line);
-        border-radius: 16px;
-        padding: 18px 20px;
-        transition: background 0.2s ease, border-color 0.2s ease;
-      }
-
-      .label {
-        display: block;
-        color: var(--muted);
-        font-size: 0.85rem;
         margin-bottom: 10px;
       }
 
-      .value {
-        font-size: 1.5rem;
-        font-weight: 800;
+      .recommend-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(120px, 1fr));
+        gap: 8px 16px;
+        margin-bottom: 12px;
+        font-size: 0.92rem;
       }
 
+      .recommend-grid .item-label {
+        color: var(--muted);
+        font-weight: 700;
+        margin-right: 6px;
+      }
+
+      .recommend-note {
+        font-size: 0.92rem;
+        line-height: 1.6;
+        margin-bottom: 6px;
+      }
+
+      .recommend-note strong {
+        color: var(--primary-dark);
+      }
+
+      /* ===== Contact (partnership) ===== */
       .contact-section {
         margin-top: 32px;
         padding-top: 28px;
@@ -357,12 +403,6 @@
         width: 100%;
       }
 
-      .contact-form .primary:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-        transform: none;
-      }
-
       .contact-status {
         display: none;
         margin-top: 4px;
@@ -372,9 +412,7 @@
         font-size: 0.95rem;
       }
 
-      .contact-status.show {
-        display: block;
-      }
+      .contact-status.show { display: block; }
 
       .contact-status.success {
         background: var(--result-bg);
@@ -388,6 +426,7 @@
         color: var(--error-text);
       }
 
+      /* ===== Comments ===== */
       .comments-section {
         margin-top: 32px;
         padding-top: 28px;
@@ -407,22 +446,6 @@
         .content { padding: 22px 18px; }
         .header { padding: 22px 18px; }
 
-        .ball {
-          width: 54px;
-          height: 54px;
-          font-size: 1.3rem;
-        }
-
-        .ball.mini {
-          width: 34px;
-          height: 34px;
-          font-size: 0.85rem;
-        }
-
-        .meta {
-          grid-template-columns: 1fr;
-        }
-
         .theme-toggle {
           top: 12px;
           right: 12px;
@@ -431,6 +454,14 @@
 
         .theme-toggle #themeLabel {
           display: none;
+        }
+
+        .recommend-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .chat-window {
+          max-height: 420px;
         }
       }
     </style>
@@ -443,43 +474,14 @@
 
     <div class="app">
       <div class="header">
-        <h1>로또 번호 추첨기</h1>
-        <div class="subtitle">행운의 숫자를 뽑아보세요</div>
+        <h1>👔 남성 코디 추천 챗봇</h1>
+        <div class="subtitle">체형 · 피부톤 · 상황에 맞는 코디를 추천해드려요</div>
       </div>
 
       <div class="content">
-        <div class="controls">
-          <button class="primary" id="drawBtn">번호 뽑기</button>
-          <button class="secondary" id="drawExtraBtn">5게임 추가 뽑기</button>
-          <button class="secondary" id="resetBtn">초기화</button>
-        </div>
+        <div class="chat-window" id="chatWindow" aria-live="polite"></div>
 
-        <div class="drawn-numbers" id="drawnNumbers" aria-live="polite">
-          <div class="ball empty">?</div>
-          <div class="ball empty">?</div>
-          <div class="ball empty">?</div>
-          <div class="ball empty">?</div>
-          <div class="ball empty">?</div>
-          <div class="ball empty">?</div>
-        </div>
-
-        <div class="result-box" id="resultBox">🎉 오늘의 로또 번호가 생성되었습니다!</div>
-
-        <div class="extra-results" id="extraResults" aria-live="polite">
-          <div class="extra-title">🍀 추가 5게임</div>
-        </div>
-
-        <div class="meta">
-          <div class="card">
-            <span class="label">추첨 회차</span>
-            <div class="value" id="roundValue">-</div>
-          </div>
-
-          <div class="card">
-            <span class="label">추첨 날짜</span>
-            <div class="value" id="dateValue">-</div>
-          </div>
-        </div>
+        <div class="step-panel" id="stepPanel"></div>
 
         <div class="contact-section">
           <div class="contact-title">🤝 제휴 문의</div>
@@ -517,6 +519,7 @@
     </div>
 
     <script>
+      /* ===================== 테마 토글 ===================== */
       const themeToggle = document.getElementById('themeToggle');
       const themeIcon = document.getElementById('themeIcon');
       const themeLabel = document.getElementById('themeLabel');
@@ -538,10 +541,7 @@
 
       function initTheme() {
         const saved = localStorage.getItem(THEME_KEY);
-        if (saved) {
-          applyTheme(saved);
-          return;
-        }
+        if (saved) { applyTheme(saved); return; }
         const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
         applyTheme(prefersDark ? 'dark' : 'light');
       }
@@ -555,83 +555,448 @@
 
       initTheme();
 
-      const drawBtn = document.getElementById('drawBtn');
-      const drawExtraBtn = document.getElementById('drawExtraBtn');
-      const resetBtn = document.getElementById('resetBtn');
-      const drawnNumbers = document.getElementById('drawnNumbers');
-      const resultBox = document.getElementById('resultBox');
-      const extraResults = document.getElementById('extraResults');
-      const roundValue = document.getElementById('roundValue');
-      const dateValue = document.getElementById('dateValue');
-      const GAME_LABELS = ['A', 'B', 'C', 'D', 'E'];
+      /* ===================== 스타일링 규칙 데이터 (키트 2부 기준) ===================== */
 
-      function randomNumberSet() {
-        const numbers = new Set();
-        while (numbers.size < 6) {
-          const value = Math.floor(Math.random() * 45) + 1;
-          numbers.add(value);
+      // 2-1. 체형별 규칙
+      const BODY_RULES = {
+        torso_thin:   { recommend: '레이어드, 두께감 있는 소재(니트·코듀로이), 오버핏 아우터, 밝은 색', point: '볼륨은 상의 또는 아우터에 둔다' },
+        torso_normal: { recommend: '대부분의 핏을 잘 소화하는 편', point: '취향과 상황 중심으로 편하게 선택해도 좋아요' },
+        torso_belly:  { recommend: '세미오버핏, 어두운 단색, 세로 라인, 셔츠 아우터 겸용, 스트레이트 팬츠', point: '상의 기장은 엉덩이 중간 정도로' },
+        shoulder_narrow: { recommend: '어깨선이 내려오는 오버핏, 가로 스트라이프, 패딩·항공점퍼 같은 볼륨 아우터', point: '어깨 쪽으로 시선을 모아줘요' },
+        shoulder_wide:   { recommend: '라운드넥, 부드러운 소재, 와이드·세미와이드 팬츠, 래글런 소매', point: '하체에 볼륨을 줘서 균형을 맞춰요' },
+        lower_thin:  { recommend: '와이드 팬츠, 카고 팬츠, 밝은 색 하의', point: '하의에 볼륨을 줘요' },
+        lower_thick: { recommend: '스트레이트·세미와이드 팬츠, 어두운 하의, 긴 기장 상의', point: '하의는 어두운 단색, 상의는 밝게' },
+        height_short: { recommend: '크롭~기본 기장 상의, 톤온톤 코디, 하이웨이스트', point: '상하의 색을 비슷하게 맞춰 길어 보이게' }
+      };
+
+      // 2-2. 피부톤별 색상 가이드
+      const SKIN_RULES = {
+        warm:    { colors: ['베이지', '카키', '브라운', '아이보리', '올리브', '머스터드', '카멜'], combo: '아이보리 니트 + 카키 팬츠 + 브라운 신발' },
+        cool:    { colors: ['네이비', '그레이', '블랙', '화이트', '라벤더', '차콜'], combo: '화이트 셔츠 + 네이비 슬랙스 + 블랙 로퍼' },
+        unknown: { colors: ['블랙', '화이트', '네이비', '그레이', '데님'], combo: '기본색 위주로 시작해보세요' }
+      };
+
+      // 2-3. 스타일별 아이템
+      const STYLE_ITEMS = {
+        casual:  { label: '캐주얼', mood: '편안한 일상', outer: '후드 집업 또는 가벼운 바람막이', top: '맨투맨 또는 후드티', bottom: '데님 팬츠 또는 코튼 팬츠', shoes: '스니커즈', acc: '캡모자' },
+        street:  { label: '스트릿', mood: '자유롭고 힙한', outer: '오버핏 후디', top: '오버핏 티셔츠', bottom: '카고 팬츠', shoes: '볼륨감 있는 운동화', acc: '볼캡' },
+        minimal: { label: '미니멀', mood: '깔끔하고 정돈된', outer: '단색 블루종 또는 바람막이', top: '무지 티셔츠 또는 셔츠', bottom: '슬랙스', shoes: '심플한 스니커즈', acc: '미니멀 시계' },
+        amekaji: { label: '아메카지', mood: '빈티지하고 단단한', outer: '워크재킷', top: '플란넬 셔츠', bottom: '데님 또는 치노 팬츠', shoes: '워커 부츠', acc: '가죽 벨트' },
+        dandy:   { label: '댄디', mood: '단정하고 성숙한', outer: '가디건 또는 코트', top: '니트 또는 셔츠', bottom: '슬랙스', shoes: '로퍼 또는 더비슈즈', acc: '가죽 시계' }
+      };
+
+      // 서로 잘 어울리는 보조 스타일 (다양한 3가지 코디 구성을 위함)
+      const STYLE_ALT = {
+        casual:  ['minimal', 'street'],
+        street:  ['casual', 'amekaji'],
+        minimal: ['dandy', 'casual'],
+        amekaji: ['street', 'dandy'],
+        dandy:   ['minimal', 'amekaji'],
+        unknown: ['casual', 'minimal']
+      };
+
+      // 2-5. 상황별 코디 공식
+      const SITUATION_RULES = {
+        daily:      { label: '데일리', top: '맨투맨 또는 니트', bottom: '데님 또는 코튼 팬츠', shoes: '스니커즈' },
+        date:       { label: '데이트', top: '깔끔한 셔츠나 니트', bottom: '슬랙스 또는 치노', shoes: '깨끗한 신발', note: '색은 3가지 이내로 정리해요' },
+        interview:  { label: '면접', top: '흰색 또는 연한 셔츠', bottom: '네이비·차콜 슬랙스', outer: '네이비·차콜 재킷', shoes: '검정 구두', note: '벨트와 구두 색을 통일해요' },
+        school:     { label: '학교·출근', top: '셔츠 또는 니트', bottom: '슬랙스 또는 치노', shoes: '로퍼 또는 깔끔한 스니커즈' },
+        gathering:  { label: '모임', outer: '가벼운 재킷 또는 셔츠 아우터', top: '티셔츠', bottom: '팬츠', shoes: '깔끔한 신발' }
+      };
+
+      // 2-4. 연령대별 가이드
+      const AGE_GUIDE = {
+        teen: '10대라서 무신사 스탠다드, 유니클로, 스파오, 탑텐 같은 가성비 브랜드 위주로 추천할게요. 트렌드 아이템은 1개 포인트만!',
+        '20s': '20대라서 개성과 트렌드를 실험해볼 수 있어요. 상황별로 코디를 다르게 가져가 볼게요.',
+        '30s': '30대라서 핏과 소재감을 살린 코디 위주로, 투자할 만한 아이템 1~2개를 포함해서 추천할게요.'
+      };
+
+      // 2-8. 예산별 브랜드 예시
+      const BUDGET_RULES = {
+        low:  { label: '저예산', brands: '무신사 스탠다드, 스파오, 탑텐, 유니클로' },
+        mid:  { label: '중간 예산', brands: '커버낫, 디스이즈네버댓, 앤더슨벨 일부, H&M, 자라' },
+        high: { label: '높은 예산', brands: '논플래시, 어반드레스, 코스, 띠어리' }
+      };
+
+      const BUDGET_DOWNGRADE = { high: 'mid', mid: 'low', low: 'low' };
+
+      /* ===================== 챗봇 질문 플로우 ===================== */
+
+      const STEPS = [
+        {
+          id: 'age',
+          bot: '안녕하세요! 저는 체형과 상황에 맞춰 코디를 추천해드리는 스타일봇이에요 😊\n먼저 연령대를 알려주세요.',
+          groups: [{ key: 'age', options: [['10대', 'teen'], ['20대', '20s'], ['30대', '30s']] }]
+        },
+        {
+          id: 'heightWeight',
+          bot: '키와 몸무게를 알려주세요! 체형 추천에 참고할게요. (숫자만 입력, 비워두면 생략 가능해요)',
+          numberFields: [{ key: 'height', label: '키(cm)' }, { key: 'weight', label: '몸무게(kg)' }]
+        },
+        {
+          id: 'bodyTop',
+          bot: '체형을 알려주세요. 어깨와 상체·복부는 어떤 편인가요?',
+          groups: [
+            { key: 'shoulder', label: '어깨', options: [['넓다', 'wide'], ['보통', 'normal'], ['좁다', 'narrow']] },
+            { key: 'torso', label: '상체·복부', options: [['마른 편', 'thin'], ['보통', 'normal'], ['배가 나온 편', 'belly']] }
+          ]
+        },
+        {
+          id: 'bodyLower',
+          bot: '하체는 어떤 편인가요?',
+          groups: [{ key: 'lower', label: '하체', options: [['얇다', 'thin'], ['보통', 'normal'], ['두꺼운 편', 'thick']] }]
+        },
+        {
+          id: 'skin',
+          bot: '피부톤도 알려주세요! 손목 안쪽 혈관이 푸른빛이면 쿨톤, 초록빛이면 웜톤이에요. 사진은 필요 없어요.',
+          groups: [{ key: 'tone', label: '피부톤', options: [['웜톤', 'warm'], ['쿨톤', 'cool'], ['모르겠음', 'unknown']] }]
+        },
+        {
+          id: 'style',
+          bot: '선호하는 스타일이 있나요?',
+          groups: [{ key: 'style', options: [['캐주얼', 'casual'], ['스트릿', 'street'], ['미니멀', 'minimal'], ['아메카지', 'amekaji'], ['댄디', 'dandy'], ['잘 모르겠음', 'unknown']] }]
+        },
+        {
+          id: 'situation',
+          bot: '어떤 상황에 입을 옷이 필요해요?',
+          groups: [{ key: 'situation', options: [['데일리', 'daily'], ['데이트', 'date'], ['면접', 'interview'], ['학교/출근', 'school'], ['모임', 'gathering']] }]
+        },
+        {
+          id: 'budget',
+          bot: '예산은 어느 정도로 생각하세요? (상의 기준)',
+          groups: [{ key: 'budget', options: [['저예산 (3만원 이하)', 'low'], ['중간 (3~8만원)', 'mid'], ['높은 예산 (8만원 이상)', 'high']] }]
         }
-        return [...numbers].sort((a, b) => a - b);
+      ];
+
+      const chatWindow = document.getElementById('chatWindow');
+      const stepPanel = document.getElementById('stepPanel');
+
+      let state = {};
+      let stepIndex = 0;
+      let currentSelection = {};
+
+      function addMessage(text, who) {
+        const row = document.createElement('div');
+        row.className = `message ${who}`;
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+        bubble.textContent = text;
+        row.appendChild(bubble);
+        chatWindow.appendChild(row);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+        return row;
       }
 
-      function updateBalls(values) {
-        const balls = drawnNumbers.querySelectorAll('.ball');
-        balls.forEach((ball, index) => {
-          const value = values[index];
-          ball.textContent = value ?? '?';
-          ball.classList.toggle('empty', value === undefined);
-          if (value !== undefined) {
-            ball.setAttribute('data-value', value);
-          } else {
-            ball.removeAttribute('data-value');
-          }
+      function addRichMessage(node) {
+        const row = document.createElement('div');
+        row.className = 'message bot';
+        const bubble = document.createElement('div');
+        bubble.className = 'bubble';
+        bubble.style.maxWidth = '100%';
+        bubble.appendChild(node);
+        row.appendChild(bubble);
+        chatWindow.appendChild(row);
+        chatWindow.scrollTop = chatWindow.scrollHeight;
+      }
+
+      function startFlow() {
+        chatWindow.innerHTML = '';
+        state = {};
+        stepIndex = 0;
+        renderStep();
+      }
+
+      function renderStep() {
+        stepPanel.innerHTML = '';
+        if (stepIndex >= STEPS.length) {
+          renderResult();
+          return;
+        }
+
+        const step = STEPS[stepIndex];
+        addMessage(step.bot, 'bot');
+        currentSelection = {};
+
+        const panel = document.createElement('div');
+
+        if (step.groups) {
+          step.groups.forEach((group) => {
+            const groupEl = document.createElement('div');
+            groupEl.className = 'group';
+
+            if (group.label) {
+              const labelEl = document.createElement('div');
+              labelEl.className = 'group-label';
+              labelEl.textContent = group.label;
+              groupEl.appendChild(labelEl);
+            }
+
+            const chips = document.createElement('div');
+            chips.className = 'chips';
+
+            group.options.forEach(([label, value]) => {
+              const chip = document.createElement('button');
+              chip.type = 'button';
+              chip.className = 'chip';
+              chip.textContent = label;
+              chip.addEventListener('click', () => {
+                chips.querySelectorAll('.chip').forEach((c) => c.classList.remove('selected'));
+                chip.classList.add('selected');
+                currentSelection[group.key] = { label, value };
+                updateNextButton();
+              });
+              chips.appendChild(chip);
+            });
+
+            groupEl.appendChild(chips);
+            panel.appendChild(groupEl);
+          });
+        }
+
+        if (step.numberFields) {
+          const row = document.createElement('div');
+          row.className = 'number-fields';
+          step.numberFields.forEach((f) => {
+            const fieldWrap = document.createElement('div');
+            fieldWrap.className = 'field';
+            const label = document.createElement('label');
+            label.textContent = f.label;
+            label.setAttribute('for', `num-${f.key}`);
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.id = `num-${f.key}`;
+            input.min = '0';
+            input.addEventListener('input', () => {
+              currentSelection[f.key] = { label: input.value, value: input.value };
+            });
+            fieldWrap.appendChild(label);
+            fieldWrap.appendChild(input);
+            row.appendChild(fieldWrap);
+          });
+          panel.appendChild(row);
+          // 키/몸무게는 입력 없이도 다음 단계로 진행 가능
+          currentSelection.__optional = true;
+        }
+
+        const actions = document.createElement('div');
+        actions.className = 'step-actions';
+        const nextBtn = document.createElement('button');
+        nextBtn.type = 'button';
+        nextBtn.className = 'primary';
+        nextBtn.textContent = stepIndex === STEPS.length - 1 ? '추천 받기' : '다음';
+        nextBtn.id = 'nextBtn';
+        nextBtn.disabled = !step.numberFields; // 선택형 질문은 선택 전까지 비활성화
+        nextBtn.addEventListener('click', () => confirmStep(step));
+        actions.appendChild(nextBtn);
+        panel.appendChild(actions);
+
+        stepPanel.innerHTML = '';
+        stepPanel.appendChild(panel);
+      }
+
+      function updateNextButton() {
+        const step = STEPS[stepIndex];
+        const nextBtn = document.getElementById('nextBtn');
+        if (!step.groups) return;
+        const allSelected = step.groups.every((g) => currentSelection[g.key]);
+        nextBtn.disabled = !allSelected;
+      }
+
+      function confirmStep(step) {
+        const summaryParts = [];
+
+        if (step.groups) {
+          step.groups.forEach((g) => {
+            state[g.key] = currentSelection[g.key].value;
+            summaryParts.push(currentSelection[g.key].label);
+          });
+        }
+
+        if (step.numberFields) {
+          step.numberFields.forEach((f) => {
+            const val = (currentSelection[f.key] && currentSelection[f.key].value) || '';
+            state[f.key] = val;
+            if (val) summaryParts.push(`${f.label} ${val}`);
+          });
+          if (summaryParts.length === 0) summaryParts.push('알려주지 않음');
+        }
+
+        addMessage(summaryParts.join(' / '), 'user');
+        stepIndex += 1;
+        renderStep();
+      }
+
+      /* ===================== 추천 생성 로직 ===================== */
+
+      function pickBodyNote(s) {
+        // 상체·복부 > 어깨 > 하체 > 보통 순으로 특징이 뚜렷한 항목을 우선 반영
+        if (s.torso === 'thin') return BODY_RULES.torso_thin;
+        if (s.torso === 'belly') return BODY_RULES.torso_belly;
+        if (s.shoulder === 'narrow') return BODY_RULES.shoulder_narrow;
+        if (s.shoulder === 'wide') return BODY_RULES.shoulder_wide;
+        if (s.lower === 'thin') return BODY_RULES.lower_thin;
+        if (s.lower === 'thick') return BODY_RULES.lower_thick;
+        return BODY_RULES.torso_normal;
+      }
+
+      function buildOutfit(styleKey, s, index) {
+        const style = STYLE_ITEMS[styleKey] || STYLE_ITEMS.casual;
+        const situation = SITUATION_RULES[s.situation] || SITUATION_RULES.daily;
+        const skin = SKIN_RULES[s.tone] || SKIN_RULES.unknown;
+        const budget = BUDGET_RULES[s.budget] || BUDGET_RULES.low;
+        const bodyNote = pickBodyNote(s);
+
+        const items = {
+          outer: situation.outer || style.outer,
+          top: situation.top || style.top,
+          bottom: situation.bottom || style.bottom,
+          shoes: situation.shoes || style.shoes,
+          acc: style.acc
+        };
+
+        if (s.situation === 'interview') {
+          items.acc = '벨트와 구두 색 통일';
+        }
+
+        const heightNum = parseInt(s.height, 10);
+        const shortNote = !isNaN(heightNum) && heightNum > 0 && heightNum < 170
+          ? ` 키가 170 미만이면 ${BODY_RULES.height_short.point}.`
+          : '';
+
+        const reasonText =
+          `${bodyNote.recommend} 스타일이라 이 핏이 잘 어울려요. ${bodyNote.point}.` +
+          `${shortNote} ${situation.note ? situation.note + '. ' : ''}` +
+          `${skin.colors.slice(0, 2).join('·')} 컬러가 피부톤과 잘 맞아서 ${situation.label} 자리에서 자연스러워요.`;
+
+        return {
+          title: `${style.label} ${situation.label}룩`,
+          mood: style.mood,
+          items,
+          reason: reasonText.trim(),
+          brands: budget.brands,
+          colorTip: skin.combo
+        };
+      }
+
+      function renderOutfitCard(outfit) {
+        const card = document.createElement('div');
+        card.className = 'recommend-card';
+
+        const title = document.createElement('div');
+        title.className = 'recommend-title';
+        title.textContent = `✨ ${outfit.title}`;
+        card.appendChild(title);
+
+        const grid = document.createElement('div');
+        grid.className = 'recommend-grid';
+        const slots = [
+          ['아우터', outfit.items.outer],
+          ['상의', outfit.items.top],
+          ['하의', outfit.items.bottom],
+          ['신발', outfit.items.shoes],
+          ['액세서리', outfit.items.acc]
+        ];
+        slots.forEach(([label, value]) => {
+          const item = document.createElement('div');
+          item.innerHTML = `<span class="item-label">${label}</span>${value}`;
+          grid.appendChild(item);
         });
+        card.appendChild(grid);
+
+        const reason = document.createElement('div');
+        reason.className = 'recommend-note';
+        reason.innerHTML = `<strong>추천 이유</strong> ${outfit.reason}`;
+        card.appendChild(reason);
+
+        const brand = document.createElement('div');
+        brand.className = 'recommend-note';
+        brand.innerHTML = `<strong>브랜드 예시</strong> ${outfit.brands}`;
+        card.appendChild(brand);
+
+        const color = document.createElement('div');
+        color.className = 'recommend-note';
+        color.innerHTML = `<strong>색 조합 팁</strong> ${outfit.colorTip}`;
+        card.appendChild(color);
+
+        return card;
       }
 
-      function renderExtraGames() {
-        const rowsHtml = GAME_LABELS.map((label) => {
-          const numbers = randomNumberSet();
-          const ballsHtml = numbers
-            .map((value) => `<div class="ball mini" data-value="${value}">${value}</div>`)
-            .join('');
-          return `<div class="extra-row"><span class="extra-label">${label}</span>${ballsHtml}</div>`;
-        }).join('');
-        extraResults.innerHTML = `<div class="extra-title">🍀 추가 5게임</div>${rowsHtml}`;
-        extraResults.classList.add('show');
+      function assumptionNotes(s) {
+        const notes = [];
+        if (s.tone === 'unknown') notes.push('피부톤 정보가 없어서 무난한 기본 컬러(블랙·화이트·네이비·그레이)로 가정했어요.');
+        if (s.style === 'unknown') notes.push('선호 스타일 정보가 없어서 무난한 캐주얼/미니멀 느낌으로 가정했어요.');
+        return notes;
       }
 
-      function setDateInfo() {
-        const now = new Date();
-        const round = Math.floor((Date.now() - new Date('2024-01-01').getTime()) / (1000 * 60 * 60 * 24 * 7)) + 1;
-        roundValue.textContent = `${round}회`;
-        dateValue.textContent = now.toLocaleDateString('ko-KR', {
-          year: 'numeric',
-          month: 'long',
-          day: 'numeric'
+      function renderResult() {
+        const s = state;
+        const primaryStyle = s.style === 'unknown' ? 'casual' : s.style;
+        const altStyles = STYLE_ALT[primaryStyle] || STYLE_ALT.unknown;
+        const styleKeys = [primaryStyle, ...altStyles];
+
+        const introParts = [];
+        if (AGE_GUIDE[s.age]) introParts.push(AGE_GUIDE[s.age]);
+        introParts.push(...assumptionNotes(s));
+        introParts.push('입력해주신 정보로 코디 3가지를 추천해드릴게요!');
+        addMessage(introParts.join('\n'), 'bot');
+
+        const wrap = document.createElement('div');
+        wrap.className = 'recommend-wrap';
+        styleKeys.forEach((styleKey, i) => {
+          const outfit = buildOutfit(styleKey, s, i);
+          wrap.appendChild(renderOutfitCard(outfit));
         });
+        addRichMessage(wrap);
+
+        renderFollowUp();
       }
 
-      drawBtn.addEventListener('click', () => {
-        const numbers = randomNumberSet();
-        updateBalls(numbers);
-        resultBox.classList.add('show');
-        resultBox.textContent = `🎉 오늘의 로또 번호: ${numbers.join(', ')}`;
-      });
+      function renderFollowUp() {
+        addMessage('더 캐주얼하게 / 더 단정하게 / 예산 낮춰서 다시 추천해드릴까요?', 'bot');
 
-      drawExtraBtn.addEventListener('click', () => {
-        renderExtraGames();
-      });
+        const panel = document.createElement('div');
+        const quick = document.createElement('div');
+        quick.className = 'quick-replies';
 
-      resetBtn.addEventListener('click', () => {
-        updateBalls([undefined, undefined, undefined, undefined, undefined, undefined]);
-        resultBox.classList.remove('show');
-        extraResults.classList.remove('show');
-        extraResults.innerHTML = '<div class="extra-title">🍀 추가 5게임</div>';
-      });
+        const makeBtn = (label, handler) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'secondary';
+          btn.textContent = label;
+          btn.addEventListener('click', handler);
+          return btn;
+        };
 
-      setDateInfo();
-      updateBalls([undefined, undefined, undefined, undefined, undefined, undefined]);
+        quick.appendChild(makeBtn('더 캐주얼하게', () => {
+          addMessage('더 캐주얼하게', 'user');
+          state.style = 'casual';
+          renderResult();
+        }));
 
+        quick.appendChild(makeBtn('더 단정하게', () => {
+          addMessage('더 단정하게', 'user');
+          state.style = 'dandy';
+          renderResult();
+        }));
+
+        quick.appendChild(makeBtn('예산 낮춰서 다시', () => {
+          addMessage('예산 낮춰서 다시', 'user');
+          state.budget = BUDGET_DOWNGRADE[state.budget] || 'low';
+          renderResult();
+        }));
+
+        quick.appendChild(makeBtn('처음부터 다시', () => {
+          startFlow();
+        }));
+
+        panel.appendChild(quick);
+        stepPanel.innerHTML = '';
+        stepPanel.appendChild(panel);
+      }
+
+      startFlow();
+
+      /* ===================== 제휴 문의 폼 (Formspree) ===================== */
       const contactForm = document.getElementById('contactForm');
       const contactSubmit = document.getElementById('contactSubmit');
       const contactStatus = document.getElementById('contactStatus');
@@ -655,7 +1020,7 @@
             contactForm.reset();
           } else {
             const data = await response.json().catch(() => null);
-            const message = data?.errors?.map((e) => e.message).join(', ');
+            const message = data && data.errors ? data.errors.map((e) => e.message).join(', ') : '';
             contactStatus.textContent = `⚠️ 전송에 실패했습니다. ${message || '잠시 후 다시 시도해 주세요.'}`;
             contactStatus.classList.add('show', 'error');
           }
@@ -671,8 +1036,8 @@
 
     <script>
       var disqus_config = function () {
-        this.page.url = 'https://ab01056477208-collab.github.io/test1/';
-        this.page.identifier = 'lotto-number-generator';
+        this.page.url = 'https://test1-1.pages.dev/';
+        this.page.identifier = 'style-recommendation-chatbot';
       };
       (function () {
         var d = document, s = d.createElement('script');
